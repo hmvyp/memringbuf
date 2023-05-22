@@ -5,7 +5,7 @@
 
 template<typename count_t, unsigned POWER, size_t TEST_BSIZE >
 struct MemRingbufTest {
-    MemRingbufTest(){
+    MemRingbufTest(): use_read(false) {
         reinit();
     }
 
@@ -22,6 +22,7 @@ struct MemRingbufTest {
     bool test(unsigned imod, unsigned omod) {
         reinit();
         for(size_t k = 0 ;; ++k){
+            // amounts to write from input and to read into output:
             size_t ia = std::min( imod - (k % imod) + 1, TEST_BSIZE - ic);
             size_t oa = std::min( (k % omod) + 1, TEST_BSIZE - oc);
 
@@ -39,17 +40,25 @@ struct MemRingbufTest {
                continue; // sometimes skip reading;
             }
 
-            uint8_t* pdata;
-            size_t nr = mrb.get_some(&pdata);
-            memcpy(ob + oc,  pdata, nr);
-            mrb.consume(nr);
-            oc += nr;
+            if(use_read){
+                size_t nr = mrb.read(ob + oc, oa);
+                oc += nr;
+            } else {
+                uint8_t* pdata;
+                size_t nr = mrb.get_some(&pdata);
+                memcpy(ob + oc,  pdata, nr);
+                mrb.consume(nr);
+                oc += nr;
+            }
+
+
         }
 
         return memcmp(ib, ob, TEST_BSIZE) == 0;
     }
 
 
+    bool use_read; // use read method instead of read_some() - consume()
     MemRingBuf<count_t, POWER> mrb;
 
     size_t ic;
@@ -59,9 +68,11 @@ struct MemRingbufTest {
     uint8_t ob[TEST_BSIZE];
 };
 
-inline bool memringbif_tests(){
+inline bool memringbif_tests(bool use_read = false){
 
     MemRingbufTest<uint8_t, 7, 1000> test;
+    test.use_read = use_read;
+
     bool res = true;
 
     res = res && test.test(5,7);
@@ -69,6 +80,16 @@ inline bool memringbif_tests(){
     res = res && test.test(171,53);
     res = res && test.test(37,147);
     res = res && test.test(127,3);
+
+    return res;
+}
+
+inline bool memringbif_all_tests(){
+
+    bool res = true;
+
+    res = res && memringbif_tests(false);
+    res = res && memringbif_tests(true);
 
     return res;
 }

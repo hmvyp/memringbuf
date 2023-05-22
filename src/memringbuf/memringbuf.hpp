@@ -60,11 +60,10 @@ struct MemRingBuf{
     count_t read(uint8_t* buf, count_t capacity){
         count_t n = std::min(available(), capacity);
 
-        count_t wi = wc_ & MASK;
         count_t ri = rc_ & MASK;
 
         if(n <= SIZE - ri) {
-            memcpy(buf, data_.data(), n);
+            memcpy(buf, data_.data() + ri, n);
         }else{
             count_t n1 = SIZE - ri;
             memcpy(buf, data_.data() + ri, n1);
