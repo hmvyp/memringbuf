@@ -3,9 +3,10 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>  // memcpy
 #include <array>
-#include <memory>
-#include <type_traits>
+#include <algorithm> // std::min
+#include <type_traits> // is_unsigned
 
 
 template<
@@ -15,6 +16,7 @@ template<
 struct MemRingBuf{
     static_assert(std::is_unsigned<count_t>::value, "MemRingBuf: count_t shall be unsigned");
     static_assert((sizeof(count_t) <= sizeof(size_t)), "MemRingBuf: count_t shall not be longer than size_t");
+
     // count_t shall have at least one additional bit to distinguish between full and empty buffer state:
     static_assert((POWER + 1 <= sizeof(count_t) * 8), "MemRingBuf: Buffer size is too big for the given count_t");
 

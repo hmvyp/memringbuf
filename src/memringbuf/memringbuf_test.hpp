@@ -36,7 +36,7 @@ struct MemRingbufTest {
             }
 
             if(k % 5 == 1){
-               continue; // skip reading;
+               continue; // sometimes skip reading;
             }
 
             uint8_t* pdata;
@@ -59,7 +59,7 @@ struct MemRingbufTest {
     uint8_t ob[TEST_BSIZE];
 };
 
-bool memringbif_tests(){
+inline bool memringbif_tests(){
 
     MemRingbufTest<uint8_t, 7, 1000> test;
     bool res = true;
