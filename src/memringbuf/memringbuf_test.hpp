@@ -3,7 +3,7 @@
 
 #include "memringbuf.hpp"
 
-template<typename count_t, unsigned POWER, size_t TEST_BSIZE >
+template<unsigned POWER, typename count_t, size_t TEST_BSIZE >
 struct MemRingbufTest {
     MemRingbufTest(): use_read(false) {
         reinit();
@@ -59,7 +59,7 @@ struct MemRingbufTest {
 
 
     bool use_read; // use read method instead of read_some() - consume()
-    MemRingBuf<count_t, POWER> mrb;
+    MemRingBuf<POWER, count_t> mrb;
 
     size_t ic;
     size_t oc;
@@ -68,9 +68,10 @@ struct MemRingbufTest {
     uint8_t ob[TEST_BSIZE];
 };
 
+template <typename count_t>
 inline bool memringbif_tests(bool use_read = false){
 
-    MemRingbufTest<uint8_t, 7, 1000> test;
+    MemRingbufTest<7, count_t, 1000> test;
     test.use_read = use_read;
 
     bool res = true;
@@ -88,8 +89,14 @@ inline bool memringbif_all_tests(){
 
     bool res = true;
 
-    res = res && memringbif_tests(false);
-    res = res && memringbif_tests(true);
+    res = res && memringbif_tests<uint8_t>(false);
+    res = res && memringbif_tests<uint8_t>(true);
+
+    res = res && memringbif_tests<unsigned>(false);
+    res = res && memringbif_tests<unsigned>(true);
+
+    res = res && memringbif_tests<size_t>(false);
+    res = res && memringbif_tests<size_t>(true);
 
     return res;
 }

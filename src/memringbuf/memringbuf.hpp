@@ -10,8 +10,8 @@
 
 
 template<
-    typename count_t, //assuming size_t or lesser unsigned type
-    unsigned POWER // the buffer has capacity POWER of two
+    unsigned POWER,// the buffer has capacity POWER of two
+    typename count_t = unsigned //assuming size_t or lesser unsigned type
 >
 struct MemRingBuf{
     static_assert(std::is_unsigned<count_t>::value, "MemRingBuf: count_t shall be unsigned");
@@ -20,32 +20,25 @@ struct MemRingBuf{
     // count_t shall have at least one additional bit to distinguish between full and empty buffer state:
     static_assert((POWER + 1 <= sizeof(count_t) * 8), "MemRingBuf: Buffer size is too big for the given count_t");
 
-
-    enum: count_t {
-        SIZE = 1 << POWER,
-        MASK = SIZE - 1 // to extract index from read or write counter
-    };
-
-
     typedef int errcode;
 
     constexpr MemRingBuf(): wc_(0), rc_(0), data_{} {}
 
-    count_t free_space(){
-        return (SIZE - (wc_ - rc_));
+    size_t free_space(){
+        return (count_t)(SIZE - (wc_ - rc_)); // cast to (count_t) to fix dangerous promotion to signed integer
     }
 
-    count_t available(){
-        return (wc_ - rc_);
+    size_t available(){
+        return (count_t)(wc_ - rc_); // cast to (count_t) to fix dangerous promotion to signed integer
     }
 
-    errcode write(uint8_t* d, count_t n){
+    errcode write(uint8_t* d, size_t n){
         if(free_space() < n) {
             return -1; // overrun
         }
         count_t wi = wc_ & MASK;
 
-        if( n <=  SIZE - wi) {
+        if( n <=  (size_t)(SIZE - wi)) {
             memcpy(data_.data() + wi, d , n);
         }else{
             count_t n1 = SIZE - wi;
@@ -53,12 +46,12 @@ struct MemRingBuf{
             memcpy(data_.data(), d + n1, n - n1 );
         }
 
-        wc_ += n;
+        wc_ += (count_t)n;
         return 0;
     }
 
-    count_t read(uint8_t* buf, count_t capacity){
-        count_t n = std::min(available(), capacity);
+    count_t read(uint8_t* buf, size_t capacity){
+        count_t n = (count_t) std::min(available(), capacity);
 
         count_t ri = rc_ & MASK;
 
@@ -76,19 +69,17 @@ struct MemRingBuf{
 
     // get_some() - consume() methods allow the reader to read data without copying
     // (by accessing buffer data directly):
-
-    count_t get_some(uint8_t** ppdata){
+    size_t get_some(uint8_t** ppdata){
         count_t ri = rc_ & MASK;
-        count_t n = std::min(available(), (count_t)(SIZE - ri));
         *ppdata = data_.data() + ri;
-        return n;
+        return std::min(available(), (size_t)(SIZE - ri));
     }
 
-    // amount is usually the value that get_some() returned before:
-    count_t consume(count_t amount){
-        count_t n = std::min(available(), amount);
+    // amount is usually a value returned by get_some():
+    size_t consume(size_t amount){
+        count_t n = (count_t)std::min(available(), amount);
         rc_+= n;
-        return n;
+        return (size_t)n;
     }
 
     void clear(){
@@ -97,6 +88,11 @@ struct MemRingBuf{
     }
 
 private:
+
+    enum: count_t {
+        SIZE = 1 << POWER,
+        MASK = SIZE - 1 // to extract index from read or write counter
+    };
 
     count_t wc_; // write counter
     count_t rc_; // read counter
